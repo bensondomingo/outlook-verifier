@@ -1,4 +1,6 @@
-import puppeteer from 'puppeteer-core'
+import puppeteer from 'puppeteer'
+
+import selectors from '../selectors/mailnesia'
 
 export default async (
   browser: puppeteer.Browser,
@@ -9,12 +11,12 @@ export default async (
     waitUntil: 'networkidle0'
   })
 
-  const emails = await page.$$('tbody tr:nth-of-type(1)')
+  const emails = await page.$$(selectors.email_list)
 
   let verifCode = null
   for (const email of emails) {
-    const dateHandle = await email.$('td:nth-of-type(1)')
-    const subjectHandle = await email.$('td:nth-of-type(4)')
+    const dateHandle = await email.$(selectors.email_date)
+    const subjectHandle = await email.$(selectors.email_subject)
 
     const date: string = await dateHandle?.evaluate((node) => node.innerText)
     const subject: string = await subjectHandle?.evaluate(
@@ -26,26 +28,19 @@ export default async (
       subject?.trim()?.search(/^microsoft.*code$/i) >= 0
     ) {
       const emailId = await email.evaluate((node) => node?.id)
-      await page.click(`tr[id="${emailId}"]`, { delay: 50 })
+      await page.click(selectors.email_target(emailId), { delay: 50 })
       await page.bringToFront()
-      let emailBody = await page.waitForSelector('div.pill-content', {
+      const emailBody = await page.waitForSelector(selectors.email_body, {
         visible: true
       })
-      if (!emailBody) {
-        await page.click(`tr[id="${emailId}"]`, { delay: 50 })
-        await page.bringToFront()
-        emailBody = await page.waitForSelector('div.pill-content', {
-          visible: true
-        })
-        if (!emailBody) continue
-      }
-      const codeHandler = await emailBody.$('tbody tr:nth-of-type(4) span')
+      if (!emailBody) continue
+      const codeHandler = await emailBody.$(selectors.verif_code)
       if (codeHandler) {
         verifCode = await codeHandler?.evaluate((node) => node.innerText)
         break
       }
     }
   }
-  // page.close()
+  page.close()
   return verifCode
 }
