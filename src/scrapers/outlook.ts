@@ -69,5 +69,15 @@ export default async (credentials: OutlookCredentials): Promise<boolean> => {
     return false
   }
 
+  await page.bringToFront()
+  console.log(verifCode)
+
+  await page.type(selector.input__verif_code, verifCode, { delay: 5 })
+  await page.click(selector.input_submit, { delay: 50 })
+  await delay(5000)
+  await page.click(selector.input_submit, { delay: 50 })
+
+  await browser.close()
+
   return true
 }
